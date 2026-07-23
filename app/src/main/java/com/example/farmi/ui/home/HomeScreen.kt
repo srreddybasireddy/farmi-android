@@ -46,6 +46,10 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -292,7 +296,10 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(state.chatMessages) { message ->
-                                MessageBubbleView(message = message)
+                                MessageBubbleView(
+                                    message = message,
+                                    onRate = { rating -> viewModel.rateMessage(message.id, rating) }
+                                )
                             }
 
                             if (state.isAssistantTyping) {
@@ -717,6 +724,7 @@ fun WelcomeChatSuggestions(
 @Composable
 fun MessageBubbleView(
     message: ChatMessage,
+    onRate: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isUser = message.sender == MessageSender.USER
@@ -749,19 +757,51 @@ fun MessageBubbleView(
             Spacer(modifier = Modifier.width(10.dp))
         }
 
-        Box(
+        Column(
             modifier = Modifier
                 .width(280.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(bubbleColor)
                 .then(borderStroke)
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = message.content,
                 color = Color.White,
                 fontSize = 14.sp
             )
+
+            if (!isUser && message.qaId != null) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { onRate(1) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (message.likeStatus == 1) Icons.Default.ThumbUp else Icons.Outlined.ThumbUp,
+                            contentDescription = "Like",
+                            tint = if (message.likeStatus == 1) Color(0xFF0F734D) else Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { onRate(-1) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (message.likeStatus == -1) Icons.Default.ThumbDown else Icons.Outlined.ThumbDown,
+                            contentDescription = "Dislike",
+                            tint = if (message.likeStatus == -1) Color.Red else Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

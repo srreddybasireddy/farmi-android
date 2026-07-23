@@ -137,12 +137,14 @@ class LocationSyncService private constructor(private val context: Context) {
         Log.d(TAG, "Location updated: ${location.latitude}, ${location.longitude}")
         CoroutineScope(Dispatchers.IO).launch {
             var city: String? = null
+            var state: String? = null
             var country: String? = null
             try {
                 val geocoder = Geocoder(context, Locale.getDefault())
                 val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
                 if (!addresses.isNullOrEmpty()) {
                     city = addresses[0].locality
+                    state = addresses[0].adminArea
                     country = addresses[0].countryName
                 }
             } catch (e: Exception) {
@@ -153,6 +155,7 @@ class LocationSyncService private constructor(private val context: Context) {
                 latitude = location.latitude,
                 longitude = location.longitude,
                 city = city,
+                state = state,
                 country = country
             )
         }
@@ -164,6 +167,7 @@ class LocationSyncService private constructor(private val context: Context) {
                 latitude = null,
                 longitude = null,
                 city = null,
+                state = null,
                 country = null
             )
         }
@@ -173,6 +177,7 @@ class LocationSyncService private constructor(private val context: Context) {
         latitude: Double?,
         longitude: Double?,
         city: String?,
+        state: String?,
         country: String?
     ) {
         val uuid = getOrCreateDeviceUuid()
@@ -190,6 +195,7 @@ class LocationSyncService private constructor(private val context: Context) {
             put("latitude", latitude ?: JSONObject.NULL)
             put("longitude", longitude ?: JSONObject.NULL)
             put("city", city ?: JSONObject.NULL)
+            put("state", state ?: JSONObject.NULL)
             put("country", country ?: JSONObject.NULL)
             put("timestamp", timestamp)
         }

@@ -403,12 +403,16 @@ class HomeViewModel(
             delay(1200)
 
             // 4. Generate context-aware response from backend API
-            val responseText = chatRepository.getAdvisoryResponse(
+            val response = chatRepository.getAdvisoryResponse(
                 deviceUuid = deviceUuid,
                 category = _uiState.value.selectedCategory,
                 query = cleanedContent
             )
-            val assistantMessage = ChatMessage(content = responseText, sender = MessageSender.ASSISTANT)
+            val assistantMessage = ChatMessage(
+                content = response.answer,
+                sender = MessageSender.ASSISTANT,
+                qaId = response.qaId
+            )
 
             _uiState.update {
                 it.copy(
@@ -419,6 +423,32 @@ class HomeViewModel(
 
             // Save history state back to cache
             categoryChats[_uiState.value.selectedCategory] = _uiState.value.chatMessages
+        }
+    }
+
+    fun rateMessage(messageId: UUID, rating: Int) {
+        viewModelScope.launch {
+            val currentMessages = _uiState.value.chatMessages
+            val index = currentMessages.indexOfFirst { it.id == messageId }
+            if (index == -1) return@launch
+            val message = currentMessages[index]
+            val qaId = message.qaId ?: return@launch
+
+            // If same rating clicked, toggle it off
+            val finalRating = if (message.likeStatus == rating) 0 else rating
+
+            val updatedMessages = currentMessages.mapIndexed { idx, msg ->
+                if (idx == index) msg.copy(likeStatus = finalRating) else msg
+            }
+
+            _uiState.update { it.copy(chatMessages = updatedMessages) }
+            categoryChats[_uiState.value.selectedCategory] = updatedMessages
+
+            try {
+                chatRepository.submitRating(deviceUuid, qaId, finalRating)
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Failed to submit message rating: ${e.message}", e)
+            }
         }
     }
 
